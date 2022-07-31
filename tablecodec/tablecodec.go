@@ -98,7 +98,28 @@ func DecodeRecordKey(key kv.Key) (tableID int64, handle int64, err error) {
 	 *   5. understanding the coding rules is a prerequisite for implementing this function,
 	 *      you can learn it in the projection 1-2 course documentation.
 	 */
-	return
+
+	k := key
+	if len(k) != RecordRowKeyLen {
+		return 0, 0, errInvalidRecordKey.GenWithStack("invalid record key, len err - %q", k)
+	}
+	if !bytes.Equal(k[:len(tablePrefix)], TablePrefix()) {
+		return 0, 0, errInvalidRecordKey.GenWithStack("invalid record key - %q", k)
+	}
+	k = k[len(tablePrefix):]
+	if k, tableID, err = codec.DecodeInt(k); err != nil {
+		return 0, 0, errInvalidRecordKey.GenWithStack("invalid record key - %q, %v", k, err)
+	}
+
+	if !bytes.Equal(k[:len(recordPrefixSep)], recordPrefixSep) {
+		return 0, 0, errInvalidRecordKey.GenWithStack("invalid record key - %q", k)
+	}
+	k = k[len(recordPrefixSep):]
+
+	if _, handle, err = codec.DecodeInt(k); err != nil {
+		return 0, 0, errInvalidRecordKey.GenWithStack("invalid record key - %q, %v", k, err)
+	}
+	return tableID, handle, nil
 }
 
 // appendTableIndexPrefix appends table index prefix  "t[tableID]_i".
@@ -148,6 +169,26 @@ func DecodeIndexKeyPrefix(key kv.Key) (tableID int64, indexID int64, indexValues
 	 *   5. understanding the coding rules is a prerequisite for implementing this function,
 	 *      you can learn it in the projection 1-2 course documentation.
 	 */
+
+	k := key
+
+	if !bytes.Equal(k[:len(tablePrefix)], TablePrefix()) {
+		return 0, 0, nil, errInvalidRecordKey.GenWithStack("invalid record key - %q", k)
+	}
+	k = k[len(tablePrefix):]
+	if k, tableID, err = codec.DecodeInt(k); err != nil {
+		return 0, 0, nil, errInvalidRecordKey.GenWithStack("invalid record key - %q, %v", k, err)
+	}
+
+	if !bytes.Equal(k[:len(indexPrefixSep)], indexPrefixSep) {
+		return 0, 0, nil, errInvalidRecordKey.GenWithStack("invalid record key - %q", k)
+	}
+	k = k[len(recordPrefixSep):]
+
+	if indexValues, indexID, err = codec.DecodeInt(k); err != nil {
+		return 0, 0, nil, errInvalidRecordKey.GenWithStack("invalid record key - %q, %v", k, err)
+	}
+
 	return tableID, indexID, indexValues, nil
 }
 
