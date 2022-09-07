@@ -53,7 +53,7 @@ func (s *testSuiteAgg) TestAggPushDown(c *C) {
 	tk.MustExec("use test")
 	tk.MustExec("drop table if exists t")
 	tk.MustExec("create table t (a int, b int, c int)")
-	tk.MustExec("alter table t add index idx(a, b, c)")
+	// tk.MustExec("alter table t add index idx(a, b, c)")
 	// test for empty table
 	tk.MustQuery("select count(a) from t group by a;").Check(testkit.Rows())
 	tk.MustQuery("select count(a) from t;").Check(testkit.Rows("0"))
