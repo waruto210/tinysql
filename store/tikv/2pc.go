@@ -20,9 +20,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pingcap/failpoint"
+	"github.com/pingcap-incubator/tinykv/proto/pkg/kvrpcpb"
 	pb "github.com/pingcap-incubator/tinykv/proto/pkg/kvrpcpb"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/failpoint"
 	"github.com/pingcap/tidb/kv"
 	"github.com/pingcap/tidb/parser/terror"
 	"github.com/pingcap/tidb/store/tikv/tikvrpc"
@@ -346,10 +347,26 @@ func (c *twoPhaseCommitter) keySize(key []byte) int {
 }
 
 func (c *twoPhaseCommitter) buildPrewriteRequest(batch batchKeys) *tikvrpc.Request {
-	var req *pb.PrewriteRequest
 	// YOUR CODE HERE (proj6).
-	panic("YOUR CODE HERE")
-	return tikvrpc.NewRequest(tikvrpc.CmdPrewrite, req, pb.Context{})
+	// panic("YOUR CODE HERE")
+	ctx := &pb.Context{
+		RegionId: batch.region.GetID(),
+	}
+	mutations := make([]*pb.Mutation, 0, len(batch.keys))
+	for _, key := range batch.keys {
+		mutations = append(mutations, &pb.Mutation{
+			Op:  kvrpcpb.Op_Lock,
+			Key: key,
+		})
+	}
+	req := &kvrpcpb.PrewriteRequest{
+		Context:      ctx,
+		PrimaryLock:  c.primaryKey,
+		StartVersion: c.startTS,
+		LockTtl:      c.lockTTL,
+		Mutations:    mutations,
+	}
+	return tikvrpc.NewRequest(tikvrpc.CmdPrewrite, req, *ctx)
 }
 
 func (actionPrewrite) handleSingleBatch(c *twoPhaseCommitter, bo *Backoffer, batch batchKeys) error {
@@ -417,7 +434,7 @@ func (c *twoPhaseCommitter) getUndeterminedErr() error {
 	return c.mu.undeterminedErr
 }
 
-func (actionCommit) handleSingleBatch(c *twoPhaseCommitter, bo *Backoffer, batch batchKeys) error {
+func ()actionCommit handleSingleBatch(c *twoPhaseCommitter, bo *Backoffer, batch batchKeys) error {
 	// follow actionPrewrite.handleSingleBatch, build the commit request
 	var sender *RegionRequestSender
 	var err error

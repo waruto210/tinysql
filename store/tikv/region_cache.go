@@ -454,8 +454,30 @@ func (c *RegionCache) LocateRegionByID(bo *Backoffer, regionID uint64) (*KeyLoca
 // filter is used to filter some unwanted keys.
 func (c *RegionCache) GroupKeysByRegion(bo *Backoffer, keys [][]byte, filter func(key, regionStartKey []byte) bool) (map[RegionVerID][][]byte, RegionVerID, error) {
 	// YOUR CODE HERE (proj6).
-	panic("YOUR CODE HERE")
-	return nil, RegionVerID{}, nil
+	// panic("YOUR CODE HERE")
+	// return nil, RegionVerID{}, nil
+	m := make(map[RegionVerID][][]byte)
+	var firstRegionVerID RegionVerID
+	isFirst := true
+	for _, key := range keys {
+		region, err := c.LocateKey(bo, key)
+		if err != nil {
+			return nil, RegionVerID{}, err
+		}
+		if filter != nil && !filter(key, region.StartKey) {
+			continue
+		}
+		if isFirst {
+			firstRegionVerID = region.Region
+			isFirst = false
+		}
+		if _, ok := m[region.Region]; !ok {
+			keys := make([][]byte, 0, 10)
+			m[region.Region] = keys
+		}
+		m[region.Region] = append(m[region.Region], key)
+	}
+	return m, firstRegionVerID, nil
 }
 
 // ListRegionIDsInKeyRange lists ids of regions in [start_key,end_key].
